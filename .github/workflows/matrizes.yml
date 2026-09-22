@@ -1,0 +1,118 @@
+name: Testes de multiplicacao de matrizes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "matmul_padrao.c"
+      - "matmul_bloco.c"
+      - ".github/workflows/matrizes.yml"
+  workflow_dispatch:
+
+jobs:
+  testar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    strategy:
+      fail-fast: false
+      matrix:
+        metodo: [padrao, bloco]
+        otimizacao: [O0, O3]
+        n: [512, 1024, 1536]
+
+    steps:
+      - name: Baixar arquivos
+        uses: actions/checkout@v4
+
+      - name: Instalar Valgrind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+
+      - name: Compilar programa
+        run: |
+          if [ "${{ matrix.metodo }}" = "padrao" ]; then
+            gcc -${{ matrix.otimizacao }} -Wall \
+              matmul_padrao.c -o programa
+          else
+            gcc -${{ matrix.otimizacao }} -Wall \
+              matmul_bloco.c -o programa
+          fi
+
+      - name: Executar teste normal
+        run: |
+          if [ "${{ matrix.metodo }}" = "padrao" ]; then
+            ./programa ${{ matrix.n }} | tee saida_normal.txt
+          else
+            ./programa ${{ matrix.n }} 64 | tee saida_normal.txt
+          fi
+
+      - name: Executar Cachegrind
+        run: |
+          if [ "${{ matrix.metodo }}" = "padrao" ]; then
+            valgrind --tool=cachegrind \
+              --cachegrind-out-file=cachegrind.out \
+              ./programa ${{ matrix.n }} \
+              > saida_cachegrind.txt 2> cachegrind_log.txt
+          else
+            valgrind --tool=cachegrind \
+              --cachegrind-out-file=cachegrind.out \
+              ./programa ${{ matrix.n }} 64 \
+              > saida_cachegrind.txt 2> cachegrind_log.txt
+          fi
+
+      - name: Preparar resultado
+        if: always()
+        run: |
+          ARQUIVO="resultado_${{ matrix.metodo }}_${{ matrix.otimizacao }}_N${{ matrix.n }}.txt"
+
+          {
+            echo "Metodo: ${{ matrix.metodo }}"
+            echo "Otimizacao: ${{ matrix.otimizacao }}"
+            echo "N: ${{ matrix.n }}"
+            echo ""
+            echo "===== EXECUCAO NORMAL ====="
+            cat saida_normal.txt 2>/dev/null || true
+            echo ""
+            echo "===== CACHEGRIND ====="
+            grep -E \
+              "I refs|I1 misses|LLi misses|D refs|D1 misses|LLd misses|D1 miss rate|LLd miss rate|LL refs|LL misses|LL miss rate" \
+              cachegrind_log.txt 2>/dev/null || true
+          } > "$ARQUIVO"
+
+      - name: Salvar resultado individual
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-${{ matrix.metodo }}-${{ matrix.otimizacao }}-N${{ matrix.n }}
+          path: resultado_*.txt
+          retention-days: 7
+
+  juntar-resultados:
+    needs: testar
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar resultados
+        uses: actions/download-artifact@v4
+        with:
+          pattern: resultado-*
+          path: resultados
+          merge-multiple: true
+
+      - name: Juntar resultados
+        run: |
+          for ARQUIVO in $(find resultados -type f -name "resultado_*.txt" | sort)
+          do
+            cat "$ARQUIVO"
+            echo ""
+          done > resultados_matrizes.txt
+
+      - name: Salvar resultado completo
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-matrizes-completo
+          path: resultados_matrizes.txt
+          retention-days: 7
