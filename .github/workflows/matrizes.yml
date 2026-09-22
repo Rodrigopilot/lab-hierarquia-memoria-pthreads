@@ -52,11 +52,13 @@ jobs:
         run: |
           if [ "${{ matrix.metodo }}" = "padrao" ]; then
             valgrind --tool=cachegrind \
+              --cache-sim=yes \
               --cachegrind-out-file=cachegrind.out \
               ./programa ${{ matrix.n }} \
               > saida_cachegrind.txt 2> cachegrind_log.txt
           else
             valgrind --tool=cachegrind \
+              --cache-sim=yes \
               --cachegrind-out-file=cachegrind.out \
               ./programa ${{ matrix.n }} 64 \
               > saida_cachegrind.txt 2> cachegrind_log.txt
