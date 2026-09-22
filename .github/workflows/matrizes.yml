@@ -75,10 +75,8 @@ jobs:
             echo "===== EXECUCAO NORMAL ====="
             cat saida_normal.txt 2>/dev/null || true
             echo ""
-            echo "===== CACHEGRIND ====="
-            grep -E \
-              "I refs|I1 misses|LLi misses|D refs|D1 misses|LLd misses|D1 miss rate|LLd miss rate|LL refs|LL misses|LL miss rate" \
-              cachegrind_log.txt 2>/dev/null || true
+            echo "===== CACHEGRIND COMPLETO ====="
+            cat cachegrind_log.txt 2>/dev/null || true
           } > "$ARQUIVO"
 
       - name: Salvar resultado individual
