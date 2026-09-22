@@ -1,0 +1,81 @@
+name: Testes de desempenho com Pthreads
+
+"on":
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  executar-testes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Baixar arquivos
+        uses: actions/checkout@v4
+
+      - name: Registrar informacoes do sistema
+        run: |
+          {
+            echo "===== PROCESSADOR ====="
+            lscpu
+            echo ""
+            echo "===== CACHES ====="
+            lscpu -C || true
+            echo ""
+            echo "===== MEMORIA ====="
+            free -h
+            echo ""
+            echo "===== SISTEMA OPERACIONAL ====="
+            uname -a
+            echo ""
+            echo "===== VERSAO DO GCC ====="
+            gcc --version
+            echo ""
+            echo "===== PROCESSADORES DISPONIVEIS ====="
+            nproc
+          } > informacoes_sistema.txt
+
+      - name: Compilar programas
+        run: |
+          gcc -O3 -Wall -pthread \
+            matmul_pthreads.c \
+            -o matmul_pthreads
+
+          gcc -O3 -Wall -pthread \
+            matmul_pthreads_bloco.c \
+            -o matmul_pthreads_bloco
+
+      - name: Executar testes
+        run: |
+          {
+            echo "RESULTADOS DOS TESTES COM PTHREADS"
+            echo ""
+            echo "Tamanho da matriz: 1536 x 1536"
+            echo "Tamanho do bloco: 64"
+            echo ""
+
+            for THREADS in 1 2 4 8 16
+            do
+              echo "===== PTHREADS PADRAO - $THREADS THREAD(S) ====="
+              ./matmul_pthreads 1536 "$THREADS"
+              echo ""
+            done
+
+            for THREADS in 1 2 4 8 16
+            do
+              echo "===== PTHREADS COM BLOCOS - $THREADS THREAD(S) ====="
+              ./matmul_pthreads_bloco 1536 "$THREADS" 64
+              echo ""
+            done
+          } | tee resultados_pthreads.txt
+
+      - name: Salvar resultados
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-pthreads
+          path: |
+            resultados_pthreads.txt
+            informacoes_sistema.txt
+          retention-days: 7
