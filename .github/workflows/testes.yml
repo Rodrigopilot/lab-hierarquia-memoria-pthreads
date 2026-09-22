@@ -24,9 +24,16 @@ jobs:
           echo "===== VERSAO DO GCC ====="
           gcc --version
 
-      - name: Compilar programas
+      - name: Diagnosticar e compilar
         run: |
-          gcc -O3 -Wall varredura_linha.c -o varredura_linha
+          pwd
+          ls -la
+          file varredura_linha.c
+          grep -n "main" varredura_linha.c || true
+          gcc -E varredura_linha.c | grep -n "main" || true
+          gcc -c -O3 -Wall varredura_linha.c -o linha.o
+          nm linha.o | grep main || true
+          gcc linha.o -o varredura_linha
           gcc -O3 -Wall varredura_coluna.c -o varredura_coluna
 
       - name: Executar testes
@@ -37,7 +44,6 @@ jobs:
           do
             echo "" | tee -a resultados_varredura.txt
             echo "===== MATRIZ N = $N =====" | tee -a resultados_varredura.txt
-
             ./varredura_linha $N | tee -a resultados_varredura.txt
             ./varredura_coluna $N | tee -a resultados_varredura.txt
           done
