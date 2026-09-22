@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-double calcular_tempo(struct timespec inicio, struct timespec fim) {
+static double calcular_tempo(struct timespec inicio, struct timespec fim) {
     return (fim.tv_sec - inicio.tv_sec) +
            (fim.tv_nsec - inicio.tv_nsec) / 1000000000.0;
 }
@@ -15,26 +15,24 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int N = atoi(argv[1]);
+    int n = atoi(argv[1]);
 
-    if (N <= 0) {
-        printf("O tamanho da matriz deve ser maior que zero.\n");
+    if (n <= 0) {
+        printf("O tamanho deve ser maior que zero.\n");
         return 1;
     }
 
-    size_t total_elementos = (size_t)N * N;
+    size_t total = (size_t)n * (size_t)n;
+    double *matriz = malloc(total * sizeof(double));
 
-    double *A = malloc(total_elementos * sizeof(double));
-
-    if (A == NULL) {
-        printf("Erro ao alocar memoria para a matriz.\n");
+    if (matriz == NULL) {
+        printf("Erro ao alocar memoria.\n");
         return 1;
     }
 
-    /* Inicializacao padronizada da matriz */
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            A[(size_t)i * N + j] = (double)(i + j);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            matriz[(size_t)i * n + j] = (double)(i + j);
         }
     }
 
@@ -44,10 +42,9 @@ int main(int argc, char *argv[]) {
 
     clock_gettime(CLOCK_MONOTONIC, &inicio);
 
-    /* Varredura por linha: i externo e j interno */
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            if ((long long)A[(size_t)i * N + j] % 2 == 0) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if ((long long)matriz[(size_t)i * n + j] % 2 == 0) {
                 pares++;
             }
         }
@@ -55,14 +52,11 @@ int main(int argc, char *argv[]) {
 
     clock_gettime(CLOCK_MONOTONIC, &fim);
 
-    double tempo = calcular_tempo(inicio, fim);
-
     printf("Varredura por linha\n");
-    printf("N: %d\n", N);
+    printf("N: %d\n", n);
     printf("Elementos pares: %lld\n", pares);
-    printf("Tempo: %.9f segundos\n", tempo);
+    printf("Tempo: %.9f segundos\n", calcular_tempo(inicio, fim));
 
-    free(A);
-
+    free(matriz);
     return 0;
 }
