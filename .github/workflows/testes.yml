@@ -1,0 +1,49 @@
+name: Testes de localidade de memoria
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  executar-testes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar arquivos do repositorio
+        uses: actions/checkout@v4
+
+      - name: Exibir informacoes do sistema
+        run: |
+          echo "===== PROCESSADOR ====="
+          lscpu
+          echo "===== MEMORIA ====="
+          free -h
+          echo "===== SISTEMA OPERACIONAL ====="
+          uname -a
+          echo "===== VERSAO DO GCC ====="
+          gcc --version
+
+      - name: Compilar programas
+        run: |
+          gcc -O3 -Wall varredura_linha.c -o varredura_linha
+          gcc -O3 -Wall varredura_coluna.c -o varredura_coluna
+
+      - name: Executar testes
+        run: |
+          echo "RESULTADOS DOS TESTES" | tee resultados_varredura.txt
+
+          for N in 512 1024 2048 4096 8192
+          do
+            echo "" | tee -a resultados_varredura.txt
+            echo "===== MATRIZ N = $N =====" | tee -a resultados_varredura.txt
+
+            ./varredura_linha $N | tee -a resultados_varredura.txt
+            ./varredura_coluna $N | tee -a resultados_varredura.txt
+          done
+
+      - name: Salvar resultados
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-varredura
+          path: resultados_varredura.txt
